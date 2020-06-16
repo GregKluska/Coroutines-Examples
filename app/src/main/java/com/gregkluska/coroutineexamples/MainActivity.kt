@@ -20,17 +20,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         button.setOnClickListener {
-
-            // IO, Main, Default
-            CoroutineScope(IO).launch {
-                fakeApiRequest()
-            }
-        }
-    }
-
-    private suspend fun setTextOnMainThread(input: String) {
-        withContext(Main) {
-            setNewText(input)
+            setNewText("Click!")
         }
     }
 
@@ -39,28 +29,19 @@ class MainActivity : AppCompatActivity() {
         text.text = newText
     }
 
-    private suspend fun fakeApiRequest() {
-        val result1 = getResult1FromApi()
-        println("debug: $result1")
-        setTextOnMainThread(result1)
-
-        val result2 = getResult2FromApi()
-        setTextOnMainThread(result2)
+    private suspend fun setTextOnMainThread(input: String) {
+        withContext(Main) {
+            setNewText(input)
+        }
     }
 
     private suspend fun getResult1FromApi(): String {
-        logThread("getResult1FromApi")
         delay(1000)
         return RESULT_1
     }
 
     private suspend fun getResult2FromApi(): String {
-        logThread("getResult2FromApi")
         delay(1000)
         return RESULT_2
-    }
-
-    private fun logThread(methodName: String) {
-        println("debug: ${methodName}: ${Thread.currentThread().name}")
     }
 }
