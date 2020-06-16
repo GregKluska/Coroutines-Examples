@@ -3,14 +3,13 @@ package com.gregkluska.coroutineexamples
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
+
+    val JOB_TIMEOUT = 2100L
 
     private val RESULT_1 = "Result #1"
     private val RESULT_2 = "Result #2"
@@ -21,6 +20,30 @@ class MainActivity : AppCompatActivity() {
 
         button.setOnClickListener {
             setNewText("Click!")
+
+            CoroutineScope(IO).launch {
+                fakeApiRequest()
+            }
+        }
+    }
+
+    private suspend fun fakeApiRequest() {
+        withContext(IO) {
+            val job = withTimeoutOrNull(JOB_TIMEOUT) {
+
+                val result1 = getResult1FromApi()
+                setTextOnMainThread("Got $result1")
+
+                val result2 = getResult2FromApi()
+                setTextOnMainThread("Got $result2")
+
+            }
+
+            if(job == null) { //job timed out
+                val cancelMessage = "Cancelling job... Job took longer than $JOB_TIMEOUT"
+                println("debug: $cancelMessage")
+                setTextOnMainThread(cancelMessage)
+            }
         }
     }
 
