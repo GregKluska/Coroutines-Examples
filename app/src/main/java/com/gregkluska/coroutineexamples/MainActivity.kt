@@ -21,60 +21,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    //Method 2
     private fun fakeApiRequest() {
 
         CoroutineScope(IO).launch {
             val executionTime = measureTimeMillis {
 
-                val result1: Deferred<String> = async {
+                val result1 = async {
                     println("debug: launching job1: ${Thread.currentThread().name}")
                     getResult1FromApi()
-                }
+                }.await()
 
-                val result2: Deferred<String> = async {
+                val result2 = async {
                     println("debug: launching job2: ${Thread.currentThread().name}")
-                    getResult2FromApi()
-                }
+                    try {
+//                        getResult2FromApi("invalid string")
+                        getResult2FromApi(result1)
+                    }catch (e: CancellationException) {
+                        e.message
+                    }
+                }.await()
 
-                setTextOnMainThread("Got ${result1.await()}")
-                setTextOnMainThread("Got ${result2.await()}")
+                println("debug: got result#1 $result2")
             }
-            println("debug: total elapsed time: $executionTime")
+            println("debug: total elapsed time: $executionTime ms.")
         }
 
-
-    }
-
-    //Method 1
-    private fun fakeApiRequest2() {
-
-        val startTime = System.currentTimeMillis()
-
-        val parentJob = CoroutineScope(IO).launch {
-
-            val job1 = launch {
-                val time1 = measureTimeMillis {
-                    println("debug: launching job1 in thread: ${Thread.currentThread().name}")
-                    val result1 = getResult1FromApi()
-                    setTextOnMainThread("Got $result1")
-                }
-                println("debug: completed job1 in $time1 ms.")
-            }
-
-            val job2 = launch {
-                val time2 = measureTimeMillis {
-                    println("debug: launching job2 in thread: ${Thread.currentThread().name}")
-                    val result2 = getResult2FromApi()
-                    setTextOnMainThread("Got $result2")
-                }
-                println("debug: completed job2 in $time2 ms.")
-            }
-        }
-
-        parentJob.invokeOnCompletion {
-            println("debug: total elapsed time: ${System.currentTimeMillis() - startTime}")
-        }
     }
 
     private fun setNewText(input: String) {
@@ -93,8 +64,11 @@ class MainActivity : AppCompatActivity() {
         return "Result #1"
     }
 
-    private suspend fun getResult2FromApi(): String {
+    private suspend fun getResult2FromApi(result1: String): String {
         delay(1700)
-        return "Result #2"
+        if(result1.equals("Result #1")) {
+            return "Result #2"
+        }
+        throw CancellationException("Result #1 was incorrect")
     }
 }
