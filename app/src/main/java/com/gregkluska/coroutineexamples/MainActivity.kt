@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.NonCancellable.cancel
 import java.lang.Exception
 
@@ -18,45 +19,33 @@ class MainActivity : AppCompatActivity() {
         main()
     }
 
-    val handler = CoroutineExceptionHandler { _, throwable ->
-        println("Exception thrown in one of the children: $throwable")
+    val handler = CoroutineExceptionHandler { context, throwable ->
+        println("Exception thrown somewhere within parent or child: $throwable")
     }
 
     private fun main() {
-        val parentJob = CoroutineScope(IO).launch(handler) {
+        val parentJob = CoroutineScope(Main).launch(handler) {
 
-            // -- JOB A --
-            val jobA = launch {
-                val resultA = getResult(1)
-                println("resultA: $resultA")
-            }
-            jobA.invokeOnCompletion { throwable ->
-                if (throwable != null) {
-                    println("Error getting resultA: $throwable")
+            supervisorScope {
+                // -- JOB A --
+                val jobA = launch {
+                    val resultA = getResult(1)
+                    println("resultA: $resultA")
+                }
+
+                // -- JOB B --
+                val jobB = launch() {
+                    val resultB = getResult(2)
+                    println("resultB: $resultB")
+                }
+
+                // -- JOB C --
+                val jobC = launch {
+                    val resultC = getResult(3)
+                    println("resultC: $resultC")
                 }
             }
 
-            // -- JOB B --
-            val jobB = launch {
-                val resultB = getResult(2)
-                println("resultB: $resultB")
-            }
-            jobB.invokeOnCompletion { throwable ->
-                if (throwable != null) {
-                    println("Error getting resultB: $throwable")
-                }
-            }
-
-            // -- JOB C --
-            val jobC = launch {
-                val resultC = getResult(3)
-                println("resultC: $resultC")
-            }
-            jobC.invokeOnCompletion { throwable ->
-                if (throwable != null) {
-                    println("Error getting resultC: $throwable")
-                }
-            }
         }
 
         parentJob.invokeOnCompletion { throwable ->
@@ -72,9 +61,7 @@ class MainActivity : AppCompatActivity() {
     suspend fun getResult(number: Int): Int {
         delay(number * 500L)
         if (number == 2) {
-//            throw Exception("Error getting result for number $number")
-//            cancel(CancellationException("Error getting result for number $number"))
-            throw CancellationException("Error getting result for number $number")
+            throw Exception("Error getting result for number $number")
         }
         return number*2
     }
